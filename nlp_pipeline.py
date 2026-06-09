@@ -3,18 +3,49 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 
-nlp = spacy.load("en_core_web_sm")
+# =========================
+# LOAD MODELS ONCE
+# =========================
 
+nlp = spacy.load("en_core_web_sm")
+summarizer = LexRankSummarizer()
+
+
+# =========================
+# SUMMARIZATION
+# =========================
 
 def summarize(text):
+
+    if not isinstance(text, str):
+        return []
+
     text = text[:3000]
-    parser = PlaintextParser.from_string(text, Tokenizer("english"))
-    summarizer = LexRankSummarizer()
 
-    return [str(s) for s in summarizer(parser.document, 3)]
+    parser = PlaintextParser.from_string(
+        text,
+        Tokenizer("english")
+    )
 
+    return [
+        str(s)
+        for s in summarizer(parser.document, 3)
+    ]
+
+
+# =========================
+# NER
+# =========================
 
 def extract_entities(text):
+
+    if not isinstance(text, str):
+        return {
+            "PERSON": [],
+            "ORG": [],
+            "GPE": [],
+            "DATE": []
+        }
 
     doc = nlp(text)
 
