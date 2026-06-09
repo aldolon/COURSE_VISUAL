@@ -15,6 +15,14 @@ from preprocess import clean_text
 # CONFIG
 # ==================================================
 
+@st.cache_data
+def get_sample(df, n=200, seed=42):
+
+    if len(df) <= n:
+        return df
+
+    return df.sample(n, random_state=seed)
+
 st.set_page_config(
     page_title="IAD News Dashboard",
     page_icon="🧠",
@@ -147,12 +155,12 @@ st.sidebar.metric(
 # TABS
 # ==================================================
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Dashboard",
     "📰 News Feed",
-    "🔍 Analysis"
+    "🔍 Analysis",
+    "📈 Model Evaluation"
 ])
-
 
 # ==================================================
 # DASHBOARD
@@ -225,19 +233,12 @@ with tab1:
     st.subheader("Top Entities")
 
     entities_all = []
+    
+    sample_df = get_sample(df_filtered, n=200)
 
-    sample_size = min(
-        200,
-        len(df_filtered)
-    )
+    entities_all = []
 
-    sample = (
-        df_filtered["text"]
-        .dropna()
-        .sample(sample_size)
-    )
-
-    for text in sample:
+    for text in sample_df["text"].dropna():
 
         ents = extract_entities(text)
 
@@ -447,3 +448,62 @@ with tab3:
         st.info(
             "Select an article in the News Feed tab."
         )
+
+
+    
+    from sklearn.metrics import classification_report, accuracy_score
+
+
+with tab4:
+
+    st.title("📈 Model Evaluation")
+
+    metrics_path = os.path.join(BASE_DIR, "metrics.csv")
+
+    if os.path.exists(metrics_path):
+
+        metrics = pd.read_csv(metrics_path)
+
+        st.subheader("Model Comparison Table")
+
+        st.dataframe(metrics)
+
+        st.subheader("F1-score Comparison")
+
+        fig = px.bar(
+            metrics,
+            x="Model",
+            y="F1",
+            title="F1-score by Model",
+            text="F1"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Accuracy Comparison")
+
+        fig2 = px.bar(
+            metrics,
+            x="Model",
+            y="Accuracy",
+            title="Accuracy by Model",
+            text="Accuracy"
+        )
+
+        st.plotly_chart(fig2, use_container_width=True)
+
+        best_model = metrics.loc[
+            metrics["F1"].idxmax()
+        ]
+
+        st.success(
+            f"Best Model: {best_model['Model']} "
+            f"(F1 = {best_model['F1']:.4f})"
+        )
+
+    else:
+
+        st.warning(
+            "metrics.csv not found. Run train_model.py first."
+        )
+
